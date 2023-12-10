@@ -7,16 +7,19 @@
 #include "stack.h"
 
 #define MEMSIZE 4096
+#define DISP_ROW 2
+#define DISP_COL 32
 
 typedef struct chip8{
 	uint8_t mem[MEMSIZE];
-	uint8_t V[16];
-	uint16_t I;
+	uint8_t V[16]; //Register
+	uint16_t I; //Memory-Adress-Storage
 	uint8_t delayTimer;
 	uint8_t soundTimer;
 	uint16_t programCounter;
 	uint16_t stackPointer; //Points to top of stack
 	stack_t stack;
+	uint8_t display[DISP_ROW][DISP_COL];
 } Chip8;
 
 
