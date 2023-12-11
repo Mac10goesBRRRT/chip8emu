@@ -20,7 +20,7 @@ int main (int argc, char** argv){
 	Chip8* chip8 = initChip8();
 	char romName[80] = "../rom/1-chip8-logo.ch8";
 	if((loadRom(chip8, romName))==0)
-		printf("ROM: %s successfully loaded", romName);
+		printf("ROM: %s successfully loaded\n", romName);
 
 
 	if(SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -39,32 +39,74 @@ int main (int argc, char** argv){
 	renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_SetRenderDrawColor(renderer, 5, 25, 38, 255);
 	SDL_RenderClear(renderer);
+	SDL_RenderSetLogicalSize(renderer, DISP_COL*DISP_ZOOM, DISP_ROW*DISP_ZOOM);
+	SDL_SetRenderDrawColor(renderer, 5, 25, 38, 255);
+	SDL_Texture* screen = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, DISP_COL, DISP_ROW);
 	SDL_RenderPresent(renderer);
-
 	//TODO: delayTimer and soundTimer get lower by 1 at 60Hz
-		while(is_running) {
+	//TODO: do the whole display thing
+	int cycle = 0;
+	while(is_running) {
 		while(SDL_PollEvent(&event)) {
 			if(event.type == SDL_QUIT) {
 				is_running = false;
 			}
 		}
+		emulate(chip8);
+		printf(" %d\n", cycle);
+		cycle++;
+		uint32_t pixels[DISP_ROW][DISP_COL];
+		if (chip8->draw){
+			chip8->draw = false;
+			//memset(pixels, 0x051926FF, DISP_COL*DISP_ROW*sizeof(uint32_t));
+			for(int y = 0; y < DISP_ROW; y++){
+				for(int x = 0; x < DISP_COL; x++){
+					if(chip8->display[y][x] == 1)
+						pixels[y][x] = 0xcf950eff;
+					else
+						pixels[y][x] = 0x051926FF;
+				}
+			}
+			SDL_UpdateTexture(screen, NULL, pixels, DISP_COL * sizeof(uint32_t));
+			SDL_Rect rectangle;
+			rectangle.x = 0;
+			rectangle.y = 0;
+			rectangle.w = DISP_COL * DISP_ZOOM;
+			rectangle.h = DISP_ROW * DISP_ZOOM;
+			SDL_RenderCopy(renderer, screen, NULL, &rectangle);
+			SDL_RenderPresent(renderer);
+		}
 		SDL_Delay(100);
 	}
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+	/* Getting the Display Output
+	for(int y = 0; y < DISP_ROW; y++){
+		for(int x = 0; x < DISP_COL; x++){
+			if((chip8->display[y][x])==1)
+				printf("#");
+			else
+				printf(" ");
+		}
+		printf("\n");
+	}
+	*/
 	return EXIT_SUCCESS;
 }
 
 int loadRom(Chip8* chip8, char* file){
 	FILE* fp = fopen(file, "rb");
 	if(fp == NULL){
-		fprintf(stderr, "Cant open the file: %s", file);
-		return EXIT_SUCCESS;
+		fprintf(stderr, "Cant open the file: %s\n", file);
+		return EXIT_FAILURE;
 	}
 	fseek(fp, 0, SEEK_END);
 	int size = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
-
+	if(size > (4096-0x200)){
+		fprintf(stderr, "ROM Size of: %dBytes to big for CHIP8 Mem of %d", size, MEMSIZE);
+		return EXIT_FAILURE;
+	}
 	fread((chip8->mem)+0X200, sizeof(uint8_t), size, fp);
 	return EXIT_SUCCESS;
 }

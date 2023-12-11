@@ -1,15 +1,15 @@
 #include "chip8.h"
 #include "stack.h"
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
+
 
 Chip8* initChip8(){
 	Chip8* chip8 = (Chip8*)malloc(sizeof(Chip8));
 	stack_t* stack = (stack_t*)malloc(sizeof(stack_t));
 	//set mem
+	chip8->programCounter = 0x200;
 	for(int i = 0; i < MEMSIZE; i++ )
 		chip8->mem[i]=0;
+	chip8->draw = false;
 	return chip8;
 }
 
@@ -67,20 +67,28 @@ void clearScreen(Chip8* chip8){
 void loadRegisterIm(Chip8* chip8, uint16_t opcode){
 	uint8_t addr = (opcode & 0X0F00)>>8;
 	uint16_t value = opcode & 0x00FF;
-	chip8->V[addr] = value;
+	chip8->reg[addr] = value;
 }
 
 //Annn Load index Register with imm. Value
 void loadIndexRegister(Chip8* chip8, uint16_t opcode){
 	uint16_t value = opcode & 0x0FFF;
-	chip8->I = value;
+	chip8->indexRegister = value;
 }
 
 //Dxyn Display n-byte sprite starting at memory location I at
 void drawSprite(Chip8* chip8, uint16_t opcode){
-	uint8_t n = opcode & 0x000F;
-	uint8_t x = (opcode & 0x0F00)>>8;
-	uint8_t y = (opcode & 0x00F0)>>4;
+	chip8->draw = true;
+	uint16_t x = (opcode & 0x0F00)>>8;
+	uint16_t y = (opcode & 0x00F0)>>4;
+	uint16_t n = opcode & 0x000F;
+	for(int yVal = 0; yVal < n; yVal++){
+		uint8_t line = chip8->mem[chip8->indexRegister + yVal];
+		for(int xVal = 0; xVal < 8; xVal++){
+			chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] = (line & 0x80)>>7;
+			line = line << 1;
+		}
+	}
 }
 
 //1nnn - jump to address
@@ -91,10 +99,11 @@ void jumpPC(Chip8* chip8, uint16_t opcode){
 
 int emulate(Chip8* chip8){
 	uint16_t opcode = (chip8->mem[chip8->programCounter] <<8) | (chip8->mem[chip8->programCounter+1]);
+	printf("Opcode: 0x%x, PC: 0x%x", opcode, chip8->programCounter);
 	chip8->programCounter += 2;
 	switch (opcode & 0xF000){
 		case 0x0000:
-			switch(opcode & 0X0FFF){
+			switch(opcode & 0x0FFF){
 				case 0x00E0: clearScreen(chip8); break;
 			}
 			break;
@@ -108,5 +117,6 @@ int emulate(Chip8* chip8){
 			drawSprite(chip8, opcode); break;
 		default: sprintf(stderr, "Failure on 0x%x", opcode); return EXIT_FAILURE;
 	}
+	//usleep(5);
 	return EXIT_SUCCESS;
 }
