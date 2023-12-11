@@ -12,6 +12,7 @@
 #define DISP_ROW 32
 #define DISP_COL 64
 #define DISP_ZOOM 16
+#define CLOCK_HZ 500
 
 typedef struct chip8{
 	uint8_t mem[MEMSIZE];

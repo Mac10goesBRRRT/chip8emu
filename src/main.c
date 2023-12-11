@@ -16,7 +16,9 @@ int main (int argc, char** argv){
 	SDL_Surface* surface = NULL;
 	bool is_running = true;
 	SDL_Event event;
-
+	int clockperiod = 1000/CLOCK_HZ;
+	clock_t start_time, end_time;
+    double elapsed_time;
 	Chip8* chip8 = initChip8();
 	char romName[80] = "../rom/1-chip8-logo.ch8";
 	if((loadRom(chip8, romName))==0)
@@ -47,6 +49,7 @@ int main (int argc, char** argv){
 	//TODO: do the whole display thing
 	int cycle = 0;
 	while(is_running) {
+		start_time = clock();
 		while(SDL_PollEvent(&event)) {
 			if(event.type == SDL_QUIT) {
 				is_running = false;
@@ -62,7 +65,7 @@ int main (int argc, char** argv){
 			for(int y = 0; y < DISP_ROW; y++){
 				for(int x = 0; x < DISP_COL; x++){
 					if(chip8->display[y][x] == 1)
-						pixels[y][x] = 0xcf950eff;
+						pixels[y][x] = 0xFFA50FF;
 					else
 						pixels[y][x] = 0x051926FF;
 				}
@@ -76,7 +79,11 @@ int main (int argc, char** argv){
 			SDL_RenderCopy(renderer, screen, NULL, &rectangle);
 			SDL_RenderPresent(renderer);
 		}
-		SDL_Delay(100);
+		end_time = clock();
+		elapsed_time =((double) (end_time-start_time))/CLOCKS_PER_SEC*1000;
+		double time = (2-elapsed_time)<0 ? 0 : 2;
+		printf("Elapsed time: %.2f milliseconds\n", 2-elapsed_time);
+		SDL_Delay(time);
 	}
 	SDL_DestroyWindow(window);
 	SDL_Quit();
