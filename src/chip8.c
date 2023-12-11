@@ -70,6 +70,13 @@ void loadRegisterIm(Chip8* chip8, uint16_t opcode){
 	chip8->reg[addr] = value;
 }
 
+//7xkk Adds the value kk to the value of register Vx, then stores the result in Vx. 
+addValueToReg(Chip8* chip8, uint16_t opcode){
+	uint8_t addr = (opcode & 0x0F00)>>8;
+	uint16_t value = opcode & 0x00FF;
+	chip8->reg[addr] += value;
+}
+
 //Annn Load index Register with imm. Value
 void loadIndexRegister(Chip8* chip8, uint16_t opcode){
 	uint16_t value = opcode & 0x0FFF;
@@ -111,11 +118,13 @@ int emulate(Chip8* chip8){
 			jumpPC(chip8, opcode); break;
 		case 0x6000:
 			loadRegisterIm(chip8, opcode); break;
+		case 0x7000:
+			addValueToReg(chip8, opcode); break;
 		case 0xA000:
 			loadIndexRegister(chip8, opcode); break;
 		case 0xD000:
 			drawSprite(chip8, opcode); break;
-		default: sprintf(stderr, "Failure on 0x%x", opcode); return EXIT_FAILURE;
+		default: fprintf(stderr, "Failure on 0x%x\n", opcode); return EXIT_FAILURE;
 	}
 	//usleep(5);
 	return EXIT_SUCCESS;

@@ -20,7 +20,7 @@ int main (int argc, char** argv){
 	clock_t start_time, end_time;
     double elapsed_time;
 	Chip8* chip8 = initChip8();
-	char romName[80] = "../rom/1-chip8-logo.ch8";
+	char romName[80] = "../rom/2-ibm-logo.ch8";
 	if((loadRom(chip8, romName))==0)
 		printf("ROM: %s successfully loaded\n", romName);
 
