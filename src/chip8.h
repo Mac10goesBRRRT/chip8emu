@@ -7,8 +7,8 @@
 #include "stack.h"
 
 #define MEMSIZE 4096
-#define DISP_ROW 2
-#define DISP_COL 32
+#define DISP_ROW 32
+#define DISP_COL 64
 
 typedef struct chip8{
 	uint8_t mem[MEMSIZE];
