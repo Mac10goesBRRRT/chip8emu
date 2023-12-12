@@ -11,8 +11,9 @@
 #define MEMSIZE 4096
 #define DISP_ROW 32
 #define DISP_COL 64
-#define DISP_ZOOM 16
+#define DISP_ZOOM 10
 #define CLOCK_HZ 500
+#define STACKSIZE 16
 
 typedef struct chip8{
 	uint8_t mem[MEMSIZE];
@@ -22,7 +23,7 @@ typedef struct chip8{
 	uint8_t soundTimer;
 	uint16_t programCounter;
 	uint16_t stackPointer; //Points to top of stack
-	stack_t stack;
+	uint16_t stack[STACKSIZE];
 	uint8_t display[DISP_ROW][DISP_COL];
 	bool draw;
 } Chip8;

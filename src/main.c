@@ -20,7 +20,7 @@ int main (int argc, char** argv){
 	clock_t start_time, end_time;
     double elapsed_time;
 	Chip8* chip8 = initChip8();
-	char romName[80] = "../rom/2-ibm-logo.ch8";
+	char romName[80] = "../rom/3-corax+.ch8";
 	if((loadRom(chip8, romName))==0)
 		printf("ROM: %s successfully loaded\n", romName);
 
@@ -29,7 +29,9 @@ int main (int argc, char** argv){
 		fprintf(stderr, "could not init sdl2: %s\n", SDL_GetError());
 		return EXIT_FAILURE;
 	}
-	window = SDL_CreateWindow("chip8EMU", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN);
+	char taskbar[90];
+	sprintf(taskbar, "chip8EMU - %s", romName);
+	window = SDL_CreateWindow(taskbar, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN);
 	if(window == NULL) {
 		fprintf(stderr, "could not create window: %s\n", SDL_GetError());
 		return EXIT_FAILURE;
@@ -45,9 +47,7 @@ int main (int argc, char** argv){
 	SDL_SetRenderDrawColor(renderer, 5, 25, 38, 255);
 	SDL_Texture* screen = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, DISP_COL, DISP_ROW);
 	SDL_RenderPresent(renderer);
-	//TODO: delayTimer and soundTimer get lower by 1 at 60Hz
-	//TODO: do the whole display thing
-	int cycle = 0;
+	long cycle = 0; //this timer will count to 4 wich equals 62.5Hz on a 500Hz system
 	while(is_running) {
 		start_time = clock();
 		while(SDL_PollEvent(&event)) {
@@ -55,8 +55,11 @@ int main (int argc, char** argv){
 				is_running = false;
 			}
 		}
+		if(cycle % 4 == 0){
+			decrementCounters(chip8);
+		}
 		emulate(chip8);
-		printf(" %d\n", cycle);
+		//printf(" %d\n", cycle);
 		cycle++;
 		uint32_t pixels[DISP_ROW][DISP_COL];
 		if (chip8->draw){
@@ -81,8 +84,10 @@ int main (int argc, char** argv){
 		}
 		end_time = clock();
 		elapsed_time =((double) (end_time-start_time))/CLOCKS_PER_SEC*1000;
-		double time = (2-elapsed_time)<0 ? 0 : 2;
-		printf("Elapsed time: %.2f milliseconds\n", 2-elapsed_time);
+		if(elapsed_time>2)
+			printf("could not keep up\n");
+		double time = (clockperiod-elapsed_time)<0 ? 0 : clockperiod;
+		//printf("Elapsed time: %.2f milliseconds\n", clockperiod-elapsed_time);
 		SDL_Delay(time);
 	}
 	SDL_DestroyWindow(window);
