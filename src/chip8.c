@@ -190,7 +190,7 @@ void regXSUBregY(Chip8* chip8, uint16_t opcode){
 void bitshiftRightRegX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
-	uint8_t flag = (chip8->reg[addrX] & 0x1) == 1;
+	uint8_t flag = (chip8->reg[addrY] & 0x1) == 1;
 	chip8->reg[addrX] = chip8->reg[addrY] >> 1; 
 	chip8->reg[0xF] = flag;
 }
@@ -208,7 +208,7 @@ void regYNEGSUBregX(Chip8* chip8, uint16_t opcode){
 void bitshiftLeftRegX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
-	uint8_t flag = ((chip8->reg[addrX] & 0x80) == 128);
+	uint8_t flag = ((chip8->reg[addrY] & 0x80) == 128);
 	chip8->reg[addrX] = chip8->reg[addrY] << 1; 
 	chip8->reg[0xF] = flag; 
 }
@@ -240,12 +240,14 @@ void drawSprite(Chip8* chip8, uint16_t opcode){
 	uint16_t x = (opcode & 0x0F00)>>8;
 	uint16_t y = (opcode & 0x00F0)>>4;
 	uint16_t n = opcode & 0x000F;
+	x %= DISP_COL;
+	y %= DISP_ROW;
 	for(int yVal = 0; yVal < n; yVal++){
 		uint8_t line = chip8->mem[chip8->indexRegister + yVal];
 		for(int xVal = 0; xVal < 8; xVal++){
 			if(chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] == 1)
 				chip8->reg[0xF] = 1; //if there is a Collision, Flag Register is set to 1
-			chip8->display[((chip8->reg[y])+yVal)%DISP_ROW][((chip8->reg[x])+xVal)%DISP_COL] ^= (line & 0x80)>>7;
+			chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] ^= (line & 0x80)>>7;
 			line = line << 1;
 		}
 	}
@@ -254,8 +256,7 @@ void drawSprite(Chip8* chip8, uint16_t opcode){
 //Ex9E - SKP Vx
 void skipOnKey(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
-	fprintf(stdout, "Opcode 0x%x, for keypress 0x%X\n", opcode, addrX);
-	if(chip8->keyboard[addrX] == true){
+	if(chip8->keyboard[chip8->reg[addrX]] == true){
 		fprintf(stdout, "Key Pressed\n");
 		chip8->programCounter +=2;
 	}
@@ -264,7 +265,7 @@ void skipOnKey(Chip8* chip8, uint16_t opcode){
 //ExA1 - SKNP Vx
 void skipOnNotKey(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
-	if(chip8->keyboard[addrX] == false){
+	if(chip8->keyboard[chip8->reg[addrX]] == false){
 		chip8->programCounter +=2;
 	}
 }
@@ -289,8 +290,8 @@ void loadV0toVX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	for(int i = 0; i <= addrX; i++){
 		//FOR CHIP 8
-		//chip8->indexRegister += 1; 
-		chip8->reg[i] = chip8->mem[chip8->indexRegister+i];
+		chip8->reg[i] = chip8->mem[chip8->indexRegister];
+		chip8->indexRegister += 1; 
 	}
 }
 
@@ -299,8 +300,8 @@ void storeV0toVX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	for(int i = 0; i <= addrX; i++){
 		//FOR CHIP 8
-		//chip8->indexRegister += 1; 
-		chip8->mem[chip8->indexRegister+i] = chip8->reg[i];
+		chip8->mem[chip8->indexRegister] = chip8->reg[i];
+		chip8->indexRegister += 1; 
 	}
 }
 
