@@ -240,14 +240,16 @@ void drawSprite(Chip8* chip8, uint16_t opcode){
 	uint16_t x = (opcode & 0x0F00)>>8;
 	uint16_t y = (opcode & 0x00F0)>>4;
 	uint16_t n = opcode & 0x000F;
-	x %= DISP_COL;
-	y %= DISP_ROW;
+	x = (chip8->reg[x]) % DISP_COL;
+	y = (chip8->reg[y]) % DISP_ROW;
 	for(int yVal = 0; yVal < n; yVal++){
 		uint8_t line = chip8->mem[chip8->indexRegister + yVal];
 		for(int xVal = 0; xVal < 8; xVal++){
-			if(chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] == 1)
+			if((x+xVal >= DISP_COL) || (y+yVal >=DISP_ROW))
+				break;
+			if(chip8->display[y+yVal][x+xVal] == 1)
 				chip8->reg[0xF] = 1; //if there is a Collision, Flag Register is set to 1
-			chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] ^= (line & 0x80)>>7;
+			chip8->display[y+yVal][x+xVal] ^= (line & 0x80)>>7;
 			line = line << 1;
 		}
 	}
