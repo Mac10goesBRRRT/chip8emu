@@ -1,5 +1,5 @@
 #include "chip8.h"
-#include "stack.h"
+//#include "stack.h"
 
 
 Chip8* initChip8(){
