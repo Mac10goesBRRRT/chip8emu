@@ -145,6 +145,8 @@ void logORRegXReY(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
 	chip8->reg[addrX] |= chip8->reg[addrY];
+	//CHIP 8 ONLY
+	chip8->reg[0xF] = 0;
 }
 
 //8xy2 - AND Vx, Vy
@@ -152,6 +154,8 @@ void logANDRegXReY(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
 	chip8->reg[addrX] &= chip8->reg[addrY];
+	//CHIP 8 ONLY
+	chip8->reg[0xF] = 0;
 }
 
 //8xy3 - XOR Vx, Vy
@@ -159,6 +163,8 @@ void logXORRegXReY(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
 	chip8->reg[addrX] ^= chip8->reg[addrY];
+	//CHIP 8 ONLY
+	chip8->reg[0xF] = 0;
 }
 
 //8xy4 - ADD Vx, Vy Set Vx = Vx + Vy, set VF = carry
@@ -183,8 +189,9 @@ void regXSUBregY(Chip8* chip8, uint16_t opcode){
 //8xy6 - SHR Vx {, Vy}
 void bitshiftRightRegX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
+	uint8_t addrY = (opcode & 0x00F0)>>4;
 	uint8_t flag = (chip8->reg[addrX] & 0x1) == 1;
-	chip8->reg[addrX] >>= 1; 
+	chip8->reg[addrX] = chip8->reg[addrY] >> 1; 
 	chip8->reg[0xF] = flag;
 }
 
@@ -200,8 +207,9 @@ void regYNEGSUBregX(Chip8* chip8, uint16_t opcode){
 //8xyE - SHL Vx {, Vy}
 void bitshiftLeftRegX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
+	uint8_t addrY = (opcode & 0x00F0)>>4;
 	uint8_t flag = ((chip8->reg[addrX] & 0x80) == 128);
-	chip8->reg[addrX] <<= 1;
+	chip8->reg[addrX] = chip8->reg[addrY] << 1; 
 	chip8->reg[0xF] = flag; 
 }
 
@@ -219,6 +227,12 @@ void loadIndexRegister(Chip8* chip8, uint16_t opcode){
 	chip8->indexRegister = value;
 }
 
+//Bnnn - JP V0, addr, Jump to location nnn + V0.
+void jumpToLoc(Chip8* chip8, uint16_t opcode){
+	uint16_t addr = opcode & 0xFFF;
+	chip8->programCounter = addr + chip8->reg[0x0];
+}
+
 //Dxyn - Display n-byte sprite starting at memory location I at
 void drawSprite(Chip8* chip8, uint16_t opcode){
 	chip8->draw = true;
@@ -231,9 +245,27 @@ void drawSprite(Chip8* chip8, uint16_t opcode){
 		for(int xVal = 0; xVal < 8; xVal++){
 			if(chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] == 1)
 				chip8->reg[0xF] = 1; //if there is a Collision, Flag Register is set to 1
-			chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] ^= (line & 0x80)>>7;
+			chip8->display[((chip8->reg[y])+yVal)%DISP_ROW][((chip8->reg[x])+xVal)%DISP_COL] ^= (line & 0x80)>>7;
 			line = line << 1;
 		}
+	}
+}
+
+//Ex9E - SKP Vx
+void skipOnKey(Chip8* chip8, uint16_t opcode){
+	uint8_t addrX = (opcode & 0x0F00)>>8;
+	fprintf(stdout, "Opcode 0x%x, for keypress 0x%X\n", opcode, addrX);
+	if(chip8->keyboard[addrX] == true){
+		fprintf(stdout, "Key Pressed\n");
+		chip8->programCounter +=2;
+	}
+}
+
+//ExA1 - SKNP Vx
+void skipOnNotKey(Chip8* chip8, uint16_t opcode){
+	uint8_t addrX = (opcode & 0x0F00)>>8;
+	if(chip8->keyboard[addrX] == false){
+		chip8->programCounter +=2;
 	}
 }
 
@@ -256,14 +288,19 @@ void regToBCD(Chip8* chip8, uint16_t opcode){
 void loadV0toVX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	for(int i = 0; i <= addrX; i++){
-		chip8->reg[i] = chip8->mem[chip8->indexRegister + i];
+		//FOR CHIP 8
+		//chip8->indexRegister += 1; 
+		chip8->reg[i] = chip8->mem[chip8->indexRegister+i];
 	}
 }
 
+//Fx55 LD [I], VX
 void storeV0toVX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	for(int i = 0; i <= addrX; i++){
-		chip8->mem[chip8->indexRegister + i] = chip8->reg[i];
+		//FOR CHIP 8
+		//chip8->indexRegister += 1; 
+		chip8->mem[chip8->indexRegister+i] = chip8->reg[i];
 	}
 }
 
@@ -317,8 +354,15 @@ int emulate(Chip8* chip8){
 			regNotEqual(chip8, opcode); break;
 		case 0xA000:
 			loadIndexRegister(chip8, opcode); break;
+		case 0xB000:
+			jumpToLoc(chip8, opcode); break;
 		case 0xD000:
 			drawSprite(chip8, opcode); break;
+		case 0xE000:
+			switch(opcode & 0xFF){
+				case 0x9E:	skipOnKey(chip8, opcode); break;
+				case 0xA1:	skipOnNotKey(chip8, opcode); break;
+			}
 		case 0XF000:
 			switch(opcode & 0xFF){
 				case 0x1E:	indexRegAddVx(chip8, opcode); break;

@@ -9,7 +9,10 @@
 
 #include "chip8.h"
 
+#define KEYNOTSET 0xFF;
+
 int loadRom(Chip8* chip, char* file);
+int SDLK_to_hex(SDL_KeyCode key);
 
 int main (int argc, char** argv){
 	SDL_Window* window = NULL;
@@ -20,7 +23,7 @@ int main (int argc, char** argv){
 	clock_t start_time, end_time;
     double elapsed_time;
 	Chip8* chip8 = initChip8();
-	char romName[70] = "../rom/4-flags.ch8";
+	char romName[70] = "../rom/5-quirks.ch8";
 	if((loadRom(chip8, romName))==0)
 		printf("ROM: %s successfully loaded\n", romName);
 
@@ -54,6 +57,17 @@ int main (int argc, char** argv){
 			if(event.type == SDL_QUIT) {
 				is_running = false;
 			}
+			if(event.type == SDL_KEYDOWN){
+				uint8_t hexKey = SDLK_to_hex(event.key.keysym.sym);
+				chip8->keyboard[hexKey] = true;
+				fprintf(stdout, "KEYDOWN: 0x%x\n", hexKey);
+			}
+			if(event.type == SDL_KEYUP){
+				uint8_t hexKey = SDLK_to_hex(event.key.keysym.sym);
+				chip8->keyboard[hexKey] = false;
+				fprintf(stdout, "KEYUP: 0x%x\n", hexKey);
+			}
+
 		}
 		if(cycle % 4 == 0){
 			decrementCounters(chip8);
@@ -120,5 +134,33 @@ int loadRom(Chip8* chip8, char* file){
 		return EXIT_FAILURE;
 	}
 	fread((chip8->mem)+0X200, sizeof(uint8_t), size, fp);
+	//Just for ROM 5:
+	chip8->mem[0x1FF]  = 0x1;
 	return EXIT_SUCCESS;
+}
+
+
+int SDLK_to_hex(SDL_KeyCode key){
+	switch (key){
+		case SDLK_1: return 0x1; break;
+		case SDLK_2: return 0x2; break;
+		case SDLK_3: return 0x3; break;
+		case SDLK_4: return 0xC; break;
+
+		case SDLK_q: return 0x4; break;
+		case SDLK_w: return 0x5; break;
+		case SDLK_e: return 0x6; break;
+		case SDLK_r: return 0xD; break;
+
+		case SDLK_a: return 0x7; break;
+		case SDLK_s: return 0x8; break;
+		case SDLK_d: return 0x9; break;
+		case SDLK_f: return 0xE; break;
+
+		case SDLK_y: return 0xA; break;
+		case SDLK_x: return 0x0; break;
+		case SDLK_c: return 0xB; break;
+		case SDLK_v: return 0xF; break;
+	default: return KEYNOTSET; break;
+	}
 }

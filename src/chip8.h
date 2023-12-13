@@ -12,7 +12,7 @@
 #define DISP_ROW 32
 #define DISP_COL 64
 #define DISP_ZOOM 10
-#define CLOCK_HZ 500
+#define CLOCK_HZ 100
 #define STACKSIZE 16
 
 typedef struct chip8{
@@ -25,6 +25,7 @@ typedef struct chip8{
 	uint16_t stackPointer; //Points to top of stack
 	uint16_t stack[STACKSIZE];
 	uint8_t display[DISP_ROW][DISP_COL];
+	bool keyboard[16];
 	bool draw;
 } Chip8;
 
