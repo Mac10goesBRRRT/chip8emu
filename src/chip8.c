@@ -166,38 +166,43 @@ void regXADDregY(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
 	uint16_t res = chip8->reg[addrX] + chip8->reg[addrY];
+	chip8->reg[addrX] = res;
 	chip8->reg[0xF] = (res > 255) ? 1 : 0;
-	chip8->reg[addrX] = res & 0xFF;
 }
 
 //8xy5 - SUB Vx, Vy Set Vx = Vx - Vy, set VF = NOT borrow.
 void regXSUBregY(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
-	chip8->reg[0xF] = (chip8->reg[addrX] < chip8->reg[addrY]) ? 1 : 0;
+	//This is what Octo does. It seems to work with Timendus Test Suite
+	uint8_t flag = chip8->reg[addrX] >= chip8->reg[addrY];
 	chip8->reg[addrX] -= chip8->reg[addrY];
+	chip8->reg[0xF] = flag; 
 }
 
 //8xy6 - SHR Vx {, Vy}
 void bitshiftRightRegX(Chip8* chip8, uint16_t opcode){
-	int8_t addrX = (opcode & 0x0F00)>>8;
-	chip8->reg[0xF] = ((chip8->reg[addrX] & 0x1) == 1) ? 1 : 0;
+	uint8_t addrX = (opcode & 0x0F00)>>8;
+	uint8_t flag = (chip8->reg[addrX] & 0x1) == 1;
 	chip8->reg[addrX] >>= 1; 
+	chip8->reg[0xF] = flag;
 }
 
 //8xy7 - SUBN Vx, Vy
 void regYNEGSUBregX(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
-	chip8->reg[0xF] = (chip8->reg[addrX] < chip8->reg[addrY]) ? 1 : 0;
+	uint8_t flag = (chip8->reg[addrY] >= chip8->reg[addrX]) ? 1 : 0;
 	chip8->reg[addrX] = chip8->reg[addrY] - chip8->reg[addrX];
+	chip8->reg[0xF] = flag;
 }
 
 //8xyE - SHL Vx {, Vy}
 void bitshiftLeftRegX(Chip8* chip8, uint16_t opcode){
-	int8_t addrX = (opcode & 0x0F00)>>8;
-	chip8->reg[0xF] = ((chip8->reg[addrX] & 0x80) == 1) ? 1 : 0;
-	chip8->reg[addrX] <<= 1; 
+	uint8_t addrX = (opcode & 0x0F00)>>8;
+	uint8_t flag = ((chip8->reg[addrX] & 0x80) == 128);
+	chip8->reg[addrX] <<= 1;
+	chip8->reg[0xF] = flag; 
 }
 
 //9xy0 - SNE Vx, Vy Skip next instruction if Vx != Vy.
@@ -217,7 +222,7 @@ void loadIndexRegister(Chip8* chip8, uint16_t opcode){
 //Dxyn - Display n-byte sprite starting at memory location I at
 void drawSprite(Chip8* chip8, uint16_t opcode){
 	chip8->draw = true;
-	chip8->reg[0xF] &= 0xFE; //Collision set false (Bit 0)
+	chip8->reg[0xF] = 0; //Collision set false (Bit 0)
 	uint16_t x = (opcode & 0x0F00)>>8;
 	uint16_t y = (opcode & 0x00F0)>>4;
 	uint16_t n = opcode & 0x000F;
@@ -225,7 +230,7 @@ void drawSprite(Chip8* chip8, uint16_t opcode){
 		uint8_t line = chip8->mem[chip8->indexRegister + yVal];
 		for(int xVal = 0; xVal < 8; xVal++){
 			if(chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] == 1)
-				chip8->reg[0xF] |= 1; //if there is a Collision, Flag Register is set to 1
+				chip8->reg[0xF] = 1; //if there is a Collision, Flag Register is set to 1
 			chip8->display[(chip8->reg[y])+yVal][(chip8->reg[x])+xVal] ^= (line & 0x80)>>7;
 			line = line << 1;
 		}
