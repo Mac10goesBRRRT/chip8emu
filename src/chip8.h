@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-//#include "stack.h"
 
 #define MEMSIZE 4096
 #define DISP_ROW 32

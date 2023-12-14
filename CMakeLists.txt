@@ -12,7 +12,7 @@ find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2main)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(chip8 src/main.c src/chip8.c src/chip8.h)
+add_executable(chip8 src/main.c src/chip8.c src/chip8.h src/chip8IO.c src/chip8IO.h)
 
 # SDL2::SDL2main may or may not be available. It is e.g. required by Windows GUI applications
 if(TARGET SDL2::SDL2main)
