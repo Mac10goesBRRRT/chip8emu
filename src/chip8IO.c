@@ -61,3 +61,12 @@ int SDLK_to_hex(SDL_KeyCode key){
 	default: return KEYNOTSET; break;
 	}
 }
+
+bool SDLK_pressed(Chip8* chip8){
+	for(int i = 0; i < 0x10; i++){
+		if(chip8->keyboard[i] == true){
+			return true;
+		}
+	}
+	return false;
+}

@@ -173,7 +173,7 @@ void logXORRegXReY(Chip8* chip8, uint16_t opcode){
 void regXADDregY(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	uint8_t addrY = (opcode & 0x00F0)>>4;
-	uint16_t res = chip8->reg[addrX] + chip8->reg[addrY];
+	uint16_t res = (chip8->reg[addrX] + chip8->reg[addrY]) & 0xFFFF;
 	chip8->reg[addrX] = res;
 	chip8->reg[0xF] = (res > 255) ? 1 : 0;
 }
@@ -274,6 +274,36 @@ void skipOnNotKey(Chip8* chip8, uint16_t opcode){
 	}
 }
 
+//Fx07 - LD Vx, DT
+void getDelayReg(Chip8* chip8, uint16_t opcode){
+	uint8_t addrX = (opcode & 0x0F00)>>8;
+	chip8->reg[addrX] = chip8->delayTimer;
+}
+
+//Fx0A - LD Vx, K - Stop execution until a Key is pressed
+void getKey(Chip8* chip8, uint16_t opcode){
+	uint8_t addrX = (opcode & 0x0F00)>>8;
+	for(int i = 0; i < 0x10; i++){
+		if(chip8->keyboard[i]){
+			chip8->mem[addrX] = chip8->keyboard[i];
+			return;
+		}
+	}
+	chip8->programCounter -= 2;
+}
+
+//Fx15 - LD Vx, DT load delay register
+void setDelayReg(Chip8* chip8, uint16_t opcode){
+	uint8_t addrX = (opcode & 0xF00)>>8;
+	chip8->delayTimer = chip8->reg[addrX];
+}
+
+//Fx18 - LD Vx, ST load sound register
+void setSoundReg(Chip8* chip8, uint16_t opcode){
+	uint8_t addrX = (opcode & 0xF00)>>8;
+	chip8->soundTimer = chip8->reg[addrX];
+}
+
 //Fx1E
 void indexRegAddVx(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
@@ -320,7 +350,7 @@ void decrementCounters(Chip8* chip8){
 //Emulation logic
 int emulate(Chip8* chip8){
 	uint16_t opcode = (chip8->mem[chip8->programCounter] <<8) | (chip8->mem[chip8->programCounter+1]);
-	printf("Opcode: 0x%x, PC: 0x%x\n", opcode, chip8->programCounter);
+	//printf("Opcode: 0x%x, PC: 0x%x\n", opcode, chip8->programCounter);
 	chip8->programCounter += 2;
 	switch (opcode & 0xF000){
 		case 0x0000:
@@ -370,6 +400,10 @@ int emulate(Chip8* chip8){
 			}
 		case 0XF000:
 			switch(opcode & 0xFF){
+				case 0x07:	getDelayReg(chip8, opcode); break;
+				case 0x0A:	getKey(chip8, opcode); break;
+				case 0x15:	setDelayReg(chip8, opcode); break;
+				case 0x18:	setSoundReg(chip8, opcode); break;
 				case 0x1E:	indexRegAddVx(chip8, opcode); break;
 				case 0x33:	regToBCD(chip8, opcode); break;
 				case 0x55:	storeV0toVX(chip8, opcode); break;
