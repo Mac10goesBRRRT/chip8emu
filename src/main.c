@@ -48,12 +48,7 @@ int main (int argc, char** argv){
 	SDL_AudioDeviceID dev = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
 	
 	float x = 0;
-	for(int i = 0; i < want.freq*4; i++){
-		x += .010f;
-		int16_t sample = sin(x*4)*5000;
-		const int sample_size = sizeof(int16_t) * 1;
-		SDL_QueueAudio(dev, &sample, sample_size);
-	}
+	
 
 	module_t* mod = initMOD(chip8,gra);
 	gra->device = dev;
@@ -80,6 +75,14 @@ int main (int argc, char** argv){
 				uint8_t hexKey = SDLK_to_hex(event.key.keysym.sym);
 				chip8->keyboard[hexKey] = false;
 				fprintf(stdout, "KEYUP: 0x%x\n", hexKey);
+			}
+		}
+		if(!SDL_GetQueuedAudioSize(dev)){
+			for(int i = 0; i < want.freq*4; i++){
+				x += .010f;
+				int16_t sample = sin(x*4)*5000;
+				const int sample_size = sizeof(int16_t) * 1;
+				SDL_QueueAudio(dev, &sample, sample_size);
 			}
 		}
 	}
