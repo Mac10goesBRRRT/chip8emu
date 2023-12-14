@@ -13,6 +13,7 @@ Chip8* initChip8(){
 	for(int i = 0; i < MEMSIZE; i++ )
 		chip8->mem[i]=0;
 	chip8->draw = false;
+	srand(time(NULL)); // For RNG
 	return chip8;
 }
 
@@ -218,6 +219,13 @@ void jumpToLoc(Chip8* chip8, uint16_t opcode){
 	chip8->programCounter = addr + chip8->reg[0x0];
 }
 
+//Cxnn RND Vx, byte
+void randomNum(Chip8* chip8, uint16_t opcode){
+	uint8_t addrX = (opcode & 0x0F00)>>8;
+	uint32_t r = rand() % 256;
+	chip8->reg[addrX] = r & opcode;
+}
+
 //Dxyn - Display n-byte sprite starting at memory location I at
 void drawSprite(Chip8* chip8, uint16_t opcode){
 	chip8->draw = true;
@@ -244,7 +252,7 @@ void drawSprite(Chip8* chip8, uint16_t opcode){
 void skipOnKey(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
 	if(chip8->keyboard[chip8->reg[addrX]] == true){
-		fprintf(stdout, "Key Pressed\n");
+		//fprintf(stdout, "Key Pressed\n");
 		chip8->programCounter +=2;
 	}
 }
@@ -346,6 +354,7 @@ int emulate(Chip8* chip8){
 			switch(opcode & 0x0FFF){
 				case 0x00E0: clearScreen(chip8); break;
 				case 0x00EE: returnFunc(chip8); break;
+				default: fprintf(stderr, "Failure on 0x%x\n", opcode); return EXIT_FAILURE;
 			}
 			break;
 		case 0x1000:
@@ -373,6 +382,7 @@ int emulate(Chip8* chip8){
 				case 0x6:	bitshiftRightRegX(chip8, opcode); break;
 				case 0x7:	regYNEGSUBregX(chip8, opcode); break;
 				case 0xE:	bitshiftLeftRegX(chip8, opcode); break;
+				default: fprintf(stderr, "Failure on 0x%x\n", opcode); return EXIT_FAILURE;
 			} break;
 		case 0x9000:
 			regNotEqual(chip8, opcode); break;
@@ -380,24 +390,28 @@ int emulate(Chip8* chip8){
 			loadIndexRegister(chip8, opcode); break;
 		case 0xB000:
 			jumpToLoc(chip8, opcode); break;
+		case 0xC000:
+			randomNum(chip8, opcode); break;
 		case 0xD000:
 			drawSprite(chip8, opcode); break;
 		case 0xE000:
 			switch(opcode & 0xFF){
 				case 0x9E:	skipOnKey(chip8, opcode); break;
 				case 0xA1:	skipOnNotKey(chip8, opcode); break;
-			}
-		case 0XF000:
+				default: fprintf(stderr, "Failure on 0x%x\n", opcode); return EXIT_FAILURE;
+			} break;
+		case 0xF000:
 			switch(opcode & 0xFF){
 				case 0x07:	getDelayReg(chip8, opcode); break;
 				case 0x0A:	getKey(chip8, opcode); break;
 				case 0x15:	setDelayReg(chip8, opcode); break;
 				case 0x18:	setSoundReg(chip8, opcode); break;
 				case 0x1E:	indexRegAddVx(chip8, opcode); break;
-				case 0x29:	
+				case 0x29:	loadSprite(chip8, opcode); break;
 				case 0x33:	regToBCD(chip8, opcode); break;
 				case 0x55:	storeV0toVX(chip8, opcode); break;
 				case 0x65:	loadV0toVX(chip8, opcode); break;
+				default: fprintf(stderr, "Failure on 0x%x\n", opcode); return EXIT_FAILURE;
 			} break;
 		default: fprintf(stderr, "Failure on 0x%x\n", opcode); return EXIT_FAILURE;
 	}
