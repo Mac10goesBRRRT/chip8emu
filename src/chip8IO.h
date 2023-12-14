@@ -13,6 +13,7 @@ typedef struct graphics {
     SDL_Renderer* renderer;
     SDL_Texture* screen;
 	SDL_Event event;
+	SDL_AudioDeviceID device;
 } graphics_t;
 
 typedef struct module{

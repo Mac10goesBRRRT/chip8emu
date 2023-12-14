@@ -5,6 +5,7 @@
 #include <time.h>
 #include <SDL2/SDL.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "chip8IO.h"
 #include "chip8.h"
@@ -13,7 +14,7 @@ int loadRom(Chip8* chip, char* file);
 int SDLK_to_hex(SDL_KeyCode key);
 void printDisp(Chip8* chip8);
 
-Uint32 doTimers(Uint32 interval, Chip8* chip8);
+Uint32 doTimers(Uint32 interval, module_t* mod);
 Uint32 doCPU(Uint32 interval, Chip8* chip8);
 Uint32 doDisplay(Uint32 interval, module_t* mod);
 
@@ -22,7 +23,7 @@ int main (int argc, char** argv){
 	bool is_running = true;
 	//int clockperiod = 1000/CLOCK_HZ; Might be used later
 	Chip8* chip8 = initChip8();
-	char romName[70] = "../rom/6-keypad.ch8";
+	char romName[70] = "../rom/7-beep.ch8";
 	if((loadRom(chip8, romName)) == 0)
 		printf("ROM: %s successfully loaded\n", romName);
 	if(SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -31,19 +32,39 @@ int main (int argc, char** argv){
 	}
 	graphics_t* gra = initSDL(romName);
 	//Setting up Timers
-	if (SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER ) < 0 )
+	if (SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0 )
     {
         printf( "SDL could not initialize! SDL Error: %s\n", SDL_GetError() );
         return EXIT_FAILURE;
     }
 	
-	module_t* mod = initMOD(chip8,gra);
+	SDL_AudioSpec want;
+	SDL_memset(&want, 0, sizeof(want));
+	want.freq = 44100;
+	want.format = AUDIO_S16SYS;
+	want.channels = 1;
+	want.samples = 1024;
+	want.callback = NULL;
+	SDL_AudioDeviceID dev = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
+	
+	float x = 0;
+	for(int i = 0; i < want.freq*4; i++){
+		x += .010f;
+		int16_t sample = sin(x*4)*5000;
+		const int sample_size = sizeof(int16_t) * 1;
+		SDL_QueueAudio(dev, &sample, sample_size);
+	}
 
-	SDL_TimerID timerTime = SDL_AddTimer(16, doTimers, (void*) chip8);
+	module_t* mod = initMOD(chip8,gra);
+	gra->device = dev;
+
+	SDL_TimerID timerTime = SDL_AddTimer(16, doTimers, mod);
 	SDL_TimerID timerCPU = SDL_AddTimer(2, doCPU, chip8);
 	SDL_TimerID timerDisplay = SDL_AddTimer(30,doDisplay, mod);
 	
 	SDL_Event event;
+
+	
 
 	while(is_running) {
 		while(SDL_PollEvent(&event)) {
@@ -65,6 +86,8 @@ int main (int argc, char** argv){
 	SDL_RemoveTimer(timerTime);
 	SDL_RemoveTimer(timerCPU);
 	SDL_RemoveTimer(timerDisplay);
+	SDL_DestroyTexture(gra->screen);
+	SDL_DestroyRenderer(gra->renderer);
 	SDL_DestroyWindow(gra->window);
 	SDL_Quit();
 	return EXIT_SUCCESS;
@@ -84,17 +107,21 @@ int loadRom(Chip8* chip8, char* file){
 		return EXIT_FAILURE;
 	}
 	fread((chip8->mem)+0X200, sizeof(uint8_t), size, fp);
-	//Just for ROM 5:
-	//chip8->mem[0x1FF]  = 0x1;
 	return EXIT_SUCCESS;
 }
 
 
-Uint32 doTimers(Uint32 interval, Chip8* chip8){
+Uint32 doTimers(Uint32 interval, module_t* mod){
+	Chip8* chip8 = mod->chip8;
+	SDL_AudioDeviceID dev = mod->graphics->device;
 	if(chip8->delayTimer > 0)
 		chip8->delayTimer -= 1;
-	if(chip8->soundTimer > 0)
+	if(chip8->soundTimer > 0){
+		SDL_PauseAudioDevice(dev, 0);
 		chip8->soundTimer -= 1;
+	} else {
+		SDL_PauseAudioDevice(dev, 1);
+	}
 	return 16;
 }
 

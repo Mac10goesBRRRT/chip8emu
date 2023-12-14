@@ -17,8 +17,8 @@ add_executable(chip8 src/main.c src/chip8.c src/chip8.h src/chip8IO.c src/chip8I
 # SDL2::SDL2main may or may not be available. It is e.g. required by Windows GUI applications
 if(TARGET SDL2::SDL2main)
     # It has an implicit dependency on SDL2 functions, so it MUST be added before SDL2::SDL2 (or SDL2::SDL2-static)
-    target_link_libraries(chip8 PRIVATE SDL2::SDL2main)
+    target_link_libraries(chip8 PRIVATE SDL2::SDL2main m)
 endif()
 
 # Link to the actual SDL2 library. SDL2::SDL2 is the shared SDL library, SDL2::SDL2-static is the static SDL libarary.
-target_link_libraries(chip8 PRIVATE SDL2::SDL2)
+target_link_libraries(chip8 PRIVATE SDL2::SDL2 m)
