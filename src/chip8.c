@@ -9,12 +9,15 @@ Chip8* initChip8(){
 	chip8->stackPointer = 0;
 	memset(chip8->stack, 0, sizeof(uint16_t)*STACKSIZE);
 	chip8->programCounter = 0x200;
+	chip8->delayTimer = 0;
+	chip8->soundTimer = 0;
 	for(int i = 0; i < MEMSIZE; i++ )
 		chip8->mem[i]=0;
 	chip8->draw = false;
 	return chip8;
 }
 
+//This will need work
 void initSprite(uint8_t* mem){
 	//Each byte may be up to 8x15 in size
 	//0
@@ -318,7 +321,7 @@ void decrementCounters(Chip8* chip8){
 //Emulation logic
 int emulate(Chip8* chip8){
 	uint16_t opcode = (chip8->mem[chip8->programCounter] <<8) | (chip8->mem[chip8->programCounter+1]);
-	//printf("Opcode: 0x%x, PC: 0x%x", opcode, chip8->programCounter);
+	printf("Opcode: 0x%x, PC: 0x%x\n", opcode, chip8->programCounter);
 	chip8->programCounter += 2;
 	switch (opcode & 0xF000){
 		case 0x0000:
@@ -375,6 +378,5 @@ int emulate(Chip8* chip8){
 			} break;
 		default: fprintf(stderr, "Failure on 0x%x\n", opcode); return EXIT_FAILURE;
 	}
-	//usleep(5);
 	return EXIT_SUCCESS;
 }

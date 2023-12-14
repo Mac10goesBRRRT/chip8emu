@@ -11,8 +11,18 @@
 
 #define KEYNOTSET 0xFF;
 
+typedef struct module{
+	Chip8* chip8;
+	SDL_Renderer* renderer;
+	SDL_Texture* screen;
+} module_t;
+
 int loadRom(Chip8* chip, char* file);
 int SDLK_to_hex(SDL_KeyCode key);
+
+Uint32 doTimers(Uint32 interval, Chip8* chip8);
+Uint32 doCPU(Uint32 interval, Chip8* chip8);
+Uint32 doDisplay(Uint32 interval, module_t* mod);
 
 int main (int argc, char** argv){
 	SDL_Window* window = NULL;
@@ -39,6 +49,13 @@ int main (int argc, char** argv){
 		fprintf(stderr, "could not create window: %s\n", SDL_GetError());
 		return EXIT_FAILURE;
 	}
+
+	if (SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER ) < 0 )
+    {
+        printf( "SDL could not initialize! SDL Error: %s\n", SDL_GetError() );
+        return EXIT_FAILURE;
+    }
+
 	surface = SDL_GetWindowSurface(window);
 	SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 0xFF, 0xFF, 0xFF));
 	SDL_UpdateWindowSurface(window);
@@ -51,6 +68,17 @@ int main (int argc, char** argv){
 	SDL_Texture* screen = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, DISP_COL, DISP_ROW);
 	SDL_RenderPresent(renderer);
 	long cycle = 0; //this timer will count to 4 wich equals 62.5Hz on a 500Hz system
+	
+	
+	module_t* mod = (module_t*)malloc(sizeof(module_t));
+	mod->renderer = renderer;
+	mod->chip8 = chip8;
+	mod->screen = screen;
+
+	SDL_TimerID timerTime = SDL_AddTimer(16, doTimers, (void*) chip8);
+	SDL_TimerID timerCPU = SDL_AddTimer(2, doCPU, chip8);
+	SDL_TimerID timerDisplay = SDL_AddTimer(30,doDisplay, mod);
+	
 	while(is_running) {
 		start_time = clock();
 		while(SDL_PollEvent(&event)) {
@@ -69,41 +97,11 @@ int main (int argc, char** argv){
 			}
 
 		}
-		if(cycle % 4 == 0){
-			decrementCounters(chip8);
-		}
-		emulate(chip8);
-		//printf(" %d\n", cycle);
-		cycle++;
-		uint32_t pixels[DISP_ROW][DISP_COL];
-		if (chip8->draw){
-			chip8->draw = false;
-			//memset(pixels, 0x051926FF, DISP_COL*DISP_ROW*sizeof(uint32_t));
-			for(int y = 0; y < DISP_ROW; y++){
-				for(int x = 0; x < DISP_COL; x++){
-					if(chip8->display[y][x] == 1)
-						pixels[y][x] = 0xFFA50FF;
-					else
-						pixels[y][x] = 0x051926FF;
-				}
-			}
-			SDL_UpdateTexture(screen, NULL, pixels, DISP_COL * sizeof(uint32_t));
-			SDL_Rect rectangle;
-			rectangle.x = 0;
-			rectangle.y = 0;
-			rectangle.w = DISP_COL * DISP_ZOOM;
-			rectangle.h = DISP_ROW * DISP_ZOOM;
-			SDL_RenderCopy(renderer, screen, NULL, &rectangle);
-			SDL_RenderPresent(renderer);
-		}
-		end_time = clock();
-		elapsed_time =((double) (end_time-start_time))/CLOCKS_PER_SEC*1000;
-		if(elapsed_time>2)
-			printf("could not keep up\n");
-		double time = (clockperiod-elapsed_time)<0 ? 0 : clockperiod;
-		//printf("Elapsed time: %.2f milliseconds\n", clockperiod-elapsed_time);
-		SDL_Delay(time);
+		//SDL_Delay(2);
 	}
+	SDL_RemoveTimer(timerTime);
+	SDL_RemoveTimer(timerCPU);
+	SDL_RemoveTimer(timerDisplay);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 	/* Getting the Display Output
@@ -163,4 +161,47 @@ int SDLK_to_hex(SDL_KeyCode key){
 		case SDLK_v: return 0xF; break;
 	default: return KEYNOTSET; break;
 	}
+}
+
+Uint32 doTimers(Uint32 interval, Chip8* chip8){
+	//fprintf(stdout, "Timers Called\n");
+	if(chip8->delayTimer > 0)
+		chip8->delayTimer -= 1;
+	if(chip8->soundTimer > 0)
+		chip8->soundTimer -= 1;
+	return 16;
+}
+
+Uint32 doCPU(Uint32 interval, Chip8* chip8){
+	emulate(chip8);
+	//fprintf(stdout, "CPU Called\n");
+	return 2;
+}
+
+Uint32 doDisplay(Uint32 interval, module_t* mod){
+	SDL_Renderer* renderer = mod->renderer;
+	Chip8* chip8 = mod->chip8;
+	SDL_Texture* screen = mod->screen;
+	uint32_t pixels[DISP_ROW][DISP_COL];
+	if (chip8->draw){
+		chip8->draw = false;
+		//memset(pixels, 0x051926FF, DISP_COL*DISP_ROW*sizeof(uint32_t));
+		for(int y = 0; y < DISP_ROW; y++){
+			for(int x = 0; x < DISP_COL; x++){
+				if(chip8->display[y][x] == 1)
+					pixels[y][x] = 0xFFA50FF;
+				else
+					pixels[y][x] = 0x051926FF;
+				}
+			}
+		SDL_UpdateTexture(screen, NULL, pixels, DISP_COL * sizeof(uint32_t));
+		SDL_Rect rectangle;
+		rectangle.x = 0;
+		rectangle.y = 0;
+		rectangle.w = DISP_COL * DISP_ZOOM;
+		rectangle.h = DISP_ROW * DISP_ZOOM;
+		SDL_RenderCopy(renderer, screen, NULL, &rectangle);
+		SDL_RenderPresent(renderer);
+	}
+	return 30;
 }
