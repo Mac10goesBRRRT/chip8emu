@@ -22,7 +22,7 @@ int main (int argc, char** argv){
 	bool is_running = true;
 	//int clockperiod = 1000/CLOCK_HZ; Might be used later
 	Chip8* chip8 = initChip8();
-	char romName[70] = "../rom/5-quirks.ch8";
+	char romName[70] = "../rom/6-keypad.ch8";
 	if((loadRom(chip8, romName)) == 0)
 		printf("ROM: %s successfully loaded\n", romName);
 	if(SDL_Init(SDL_INIT_VIDEO) < 0) {

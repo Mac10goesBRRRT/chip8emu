@@ -1,15 +1,15 @@
 #include "chip8.h"
 
+void initSprite(uint8_t* mem);
 
 Chip8* initChip8(){
 	Chip8* chip8 = (Chip8*)malloc(sizeof(Chip8));
-	//stack_t* stack = (stack_t*)malloc(sizeof(stack_t));
-	//set mem
 	chip8->stackPointer = 0;
 	memset(chip8->stack, 0, sizeof(uint16_t)*STACKSIZE);
 	chip8->programCounter = 0x200;
 	chip8->delayTimer = 0;
 	chip8->soundTimer = 0;
+	initSprite(chip8->mem);
 	for(int i = 0; i < MEMSIZE; i++ )
 		chip8->mem[i]=0;
 	chip8->draw = false;
@@ -19,42 +19,25 @@ Chip8* initChip8(){
 //This will need work
 void initSprite(uint8_t* mem){
 	//Each byte may be up to 8x15 in size
-	//0
-	mem[0] = 0xF0;
-	mem[1] = 0x90;
-	mem[2] = 0x90;
-	mem[3] = 0x90;
-	mem[4] = 0xF0;
-	//1
-	mem[16] = 0x20;
-	//2
-	mem[32] = 0xF0;
-	//3
-	mem[48] = 0xF0;
-	//4
-	mem[64] = 0x90;
-	//5
-	mem[80] = 0xF0;
-	//6
-	mem[96] = 0xF0;
-	//7
-	mem[112] = 0xF0;
-	//8
-	mem[128] = 0xF0;
-	//9
-	mem[144] = 0xF0;
-	//A
-	mem[160] = 0xF0;
-	//B
-	mem[176] = 0xE0;
-	//C
-	mem[192] = 0xF0;
-	//D
-	mem[208] = 0xE0;
-	//E
-	mem[224] = 0xF0;
-	//F
-	mem[240] = 0xF0;
+	int sprite[] = {
+	/*0*/ 0xF0, 0x90, 0x90, 0x90, 0xF0,
+	/*1*/ 0x20, 0x60, 0x20, 0x20, 0x70,
+	/*2*/ 0xF0, 0x10, 0xF0, 0x80, 0xF0,
+	/*3*/ 0xF0, 0x10, 0xF0, 0x10, 0xF0,
+	/*4*/ 0x90, 0x90, 0xF0, 0x10, 0x10,
+	/*5*/ 0xF0, 0x80, 0xF0, 0x10, 0xF0,
+	/*6*/ 0xF0, 0x80, 0xF0, 0x90, 0xF0,
+	/*7*/ 0xF0, 0x10, 0x20, 0x40, 0x40,
+	/*8*/ 0xF0, 0x90, 0xF0, 0x90, 0xF0,
+	/*9*/ 0xF0, 0x90, 0xF0, 0x10, 0xF0,
+	/*A*/ 0xF0, 0x90, 0xF0, 0x90, 0x90,
+	/*B*/ 0xE0, 0x90, 0xE0, 0x90, 0xE0,
+	/*C*/ 0xF0, 0x80, 0x80, 0x80, 0xF0,
+	/*D*/ 0xE0, 0x90, 0x90, 0x90, 0xE0,
+	/*E*/ 0xF0, 0x80, 0xF0, 0x80, 0xF0,
+	/*F*/ 0xF0, 0x80, 0xF0, 0x80, 0x80
+	};
+	memcpy(mem+0x50,sprite,sizeof(sprite));
 }
 
 
@@ -310,6 +293,12 @@ void indexRegAddVx(Chip8* chip8, uint16_t opcode){
 	chip8->indexRegister += chip8->reg[addrX];
 }
 
+//Fx29 - LD F, Vx
+void loadSprite(Chip8* chip8, uint16_t opcode){
+	uint8_t addrx = (opcode & 0x0F00)>>8;
+	chip8->indexRegister = 0x50+chip8->mem[addrx]*5;
+}
+
 //Fx33 - LD B, Vx Vx to BCD
 void regToBCD(Chip8* chip8, uint16_t opcode){
 	uint8_t addrX = (opcode & 0x0F00)>>8;
@@ -405,6 +394,7 @@ int emulate(Chip8* chip8){
 				case 0x15:	setDelayReg(chip8, opcode); break;
 				case 0x18:	setSoundReg(chip8, opcode); break;
 				case 0x1E:	indexRegAddVx(chip8, opcode); break;
+				case 0x29:	
 				case 0x33:	regToBCD(chip8, opcode); break;
 				case 0x55:	storeV0toVX(chip8, opcode); break;
 				case 0x65:	loadV0toVX(chip8, opcode); break;
