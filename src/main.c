@@ -13,8 +13,8 @@
 void printDisp(Chip8* chip8);
 
 int main (int argc, char** argv){
-	if(argc > 2){
-		fprintf(stderr, "No ROM loaded\n");
+	if(argc != 2){
+		fprintf(stderr, "Number of Arguments wrong\n Use \"chip8 [path-to-rom]\"\n");
 		return EXIT_FAILURE;
 	}
 
