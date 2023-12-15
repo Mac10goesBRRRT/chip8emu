@@ -37,4 +37,7 @@ void decrementCounters(Chip8* chip8);
 
 int emulate(Chip8* chip8);
 
+
+//DEBUGGING ONLY
+void printDisp(Chip8* chip8);
 #endif

@@ -417,3 +417,18 @@ int emulate(Chip8* chip8){
 	}
 	return EXIT_SUCCESS;
 }
+
+
+//FOR DEBUGGING ONLY, NOT NEEDED FOR EMULATION
+void printDisp(Chip8* chip8){
+	//Getting the Display Output
+	for(int y = 0; y < DISP_ROW; y++){
+		for(int x = 0; x < DISP_COL; x++){
+			if((chip8->display[y][x])==1)
+				printf("#");
+			else
+				printf(" ");
+		}
+		printf("\n");
+	}
+}
